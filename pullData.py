@@ -34,6 +34,32 @@ def authenticate(client_id,client_secret):
 	access_token = auth_response.json()['access_token']
 	return access_token
 
+def getsong_details(uri,headers):
+	url = "https://api.spotify.com/v1/audio-features/{item}".format(item = uri)
+	results = {}
+	try:
+		r = requests.get(url, headers = headers).text
+		j = json.loads(r)
+		# results.append((
+		# 	j['danceability'],j['energy'],j['key'],j['mode'],j['acousticness'],j['instrumentalness'],
+		# 	j['tempo'],j["valence"],j["speechiness"],j["loudness"]))
+
+		results["danceability"] = j['danceability']
+		results["energy"] = j['energy']
+		results["key"] = j['key']
+		results["mode"] = j['mode']
+		results["acousticness"] = j['acousticness']
+		results["instrumentalness"] = j['instrumentalness']
+		results["tempo"] = j['tempo']
+		results["valence"] = j['valence']
+		results["speechiness"] = j['speechiness']
+		results["loudnes"] = j['loudnes']
+
+	except:
+		pass
+	return results
+
+
 
 def query_playlists(query):
 	'''
@@ -50,19 +76,21 @@ def query_playlists(query):
 
 	playlist_dict = {pid:[] for pid in playlistIDs}
 
-	for playlist in playlistIDs:
-		# songs = {}
+	for playlist in playlistIDs[:1]:
 		url = "https://api.spotify.com/v1/playlists/{p}/tracks".format(p = playlist)
 		r = requests.get(url, headers = headers).text
-		# songs[playlist] = []
 		for s in range(len(json.loads(r)["items"])):
 			try:
 				# songs[playlist].append((json.loads(r)["items"][s]["track"]["name"],json.loads(r)["items"][s]["track"]["uri"]))
-				playlist_dict[playlist].append((json.loads(r)["items"][s]["track"]["name"],json.loads(r)["items"][s]["track"]["uri"]))
+				uri = json.loads(r)["items"][s]["track"]["uri"].split(":")[2]
+				title = json.loads(r)["items"][s]["track"]["name"]
+				audio_features = getsong_details(uri,headers)
+				artist = json.loads(r)["items"][s]["track"]["album"]["artists"][0]["name"]
+				playlist_dict[playlist].append((title,
+												artist,		
+												audio_features))
 			except:
 				continue
-
-		# playlist_dict[playlist].append(songs)
 
 	return playlist_dict
 
