@@ -11,7 +11,7 @@ LABELS = {
 	"wonder": [],
 	"transcendence":[],
 	"tenderness":[],
-	"nostlgia":[],
+	"nostalgia":[],
 	"peacefulness":[],
 	"power": [],
 	"joyful_activation":[],
@@ -53,13 +53,11 @@ def getsong_details(uri,headers):
 		results["tempo"] = j['tempo']
 		results["valence"] = j['valence']
 		results["speechiness"] = j['speechiness']
-		results["loudnes"] = j['loudnes']
+		results["loudness"] = j['loudness']
 
 	except:
-		pass
+		print("error")
 	return results
-
-
 
 def query_playlists(query):
 	'''
@@ -67,67 +65,34 @@ def query_playlists(query):
 	
 	access_token = authenticate(CLIENT_ID,CLIENT_SECRET)
 	headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
-	url = f"https://api.spotify.com/v1/search?query={query}&type=playlist&offset=0&limit=50"
-	          #print(url)
+	url = f"https://api.spotify.com/v1/search?query={urllib.parse.quote_plus(query)}&type=playlist&offset=0&limit=50"
 	r = requests.get(url, headers = headers).text
 	playlistIDs = []
+	#get playlist ID from search results for query
 	for n in range(len(json.loads(r)["playlists"]['items'])):
 	    playlistIDs.append((json.loads(r)["playlists"]['items'][n]["id"]))
 
-	playlist_dict = {pid:[] for pid in playlistIDs}
-
-	for playlist in playlistIDs[:1]:
+	result = []
+	#for each playlist in search result, get every song and audio features
+	for playlist in playlistIDs:
 		url = "https://api.spotify.com/v1/playlists/{p}/tracks".format(p = playlist)
 		r = requests.get(url, headers = headers).text
 		for s in range(len(json.loads(r)["items"])):
 			try:
-				# songs[playlist].append((json.loads(r)["items"][s]["track"]["name"],json.loads(r)["items"][s]["track"]["uri"]))
-				uri = json.loads(r)["items"][s]["track"]["uri"].split(":")[2]
-				title = json.loads(r)["items"][s]["track"]["name"]
+				rj = json.loads(r)
+				uri = rj["items"][s]["track"]["uri"].split(":")[2]
+				title = rj["items"][s]["track"]["name"]
+				artist = rj["items"][s]["track"]["album"]["artists"][0]["name"]
 				audio_features = getsong_details(uri,headers)
-				artist = json.loads(r)["items"][s]["track"]["album"]["artists"][0]["name"]
-				playlist_dict[playlist].append((title,
-												artist,		
-												audio_features))
+				audio_features["title"] = title
+				audio_features["artist"] = artist
+				audio_features["class"] = query
+				audio_features["playlist_id"] = playlist
+				result.append(audio_features)
 			except:
 				continue
 
-	return playlist_dict
-
-
-# def get_song_info(ids):
-# 	'''
-# 	'''
-
-# 	access_token = authenticate(CLIENT_ID,CLIENT_SECRET)
-# 	headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
-# 	songs = {}
-# 	for playlist in ids:
-# 	    url = "https://api.spotify.com/v1/playlists/{p}/tracks".format(p = playlist)
-# 	    r = requests.get(url, headers = headers).text
-# 	    songs[playlist] = []
-# 	    for s in range(len(json.loads(r)["items"])):
-# 	        try:
-# 	            songs[playlist].append((json.loads(r)["items"][s]["track"]["name"],json.loads(r)["items"][s]["track"]["uri"]))
-# 	        except:
-# 	            continue
-
-# def getsong_details(l):
-# 	access_token = authenticate(CLIENT_ID,CLIENT_SECRET)
-# 	headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
-#     deets = []
-#     for item in l:
-#         url = "https://api.spotify.com/v1/audio-features/{item}".format(item = item)
-#         try:
-#             r = requests.get(url, headers = headers).text
-#             j = json.loads(r)
-#             deets.append((
-#                 j['danceability'],j['energy'],j['key'],j['mode'],j['acousticness'],j['instrumentalness'],
-#                 j['tempo'],j["valence"],j["speechiness"],j["loudness"]
-#                          ))
-#         except:
-#             deets.append(("!" * 10))
-#     return deets
+	return json.dumps(result)
 
 
 if __name__ == "__main__":
