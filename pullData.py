@@ -1,5 +1,3 @@
-import aiohttp
-from aiohttp import ClientSession
 import requests
 import json
 import urllib
@@ -7,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 
 CLIENT_ID = open("secrets.txt").read().splitlines()[0]
 CLIENT_SECRET = open("secrets.txt").read().splitlines()[1]
@@ -99,6 +98,12 @@ def multiprocess_queries(ids,query):
 		result = pool.starmap(fetch_songs_from_playlist,[(session,query,playlist) for playlist in ids])
 	return result 
 
+def multithreading_queries(ids,query):
+	with ThreadPoolExecutor(10) as pool:
+		with requests.Session() as session:
+			result = pool.map(fetch_songs_from_playlist,session * len(ids), query*len(ids), ids)
+	return result 
+
 def query_playlists(query):
 	'''
 	'''
@@ -114,36 +119,16 @@ def query_playlists(query):
 	    playlistIDs.append((json.loads(r)["playlists"]['items'][n]["id"]))
 
 	urls = ["https://api.spotify.com/v1/playlists/{p}/tracks".format(p = playlist) for playlist in playlistIDs]
+	#result = multiprocess_queries(playlistIDs,query)
 	result = multiprocess_queries(playlistIDs,query)
-	# #result = []
-	# #for each playlist in search result, get every song and audio features
-	# for playlist in playlistIDs:
-	# 	url = "https://api.spotify.com/v1/playlists/{p}/tracks".format(p = playlist)
-	# 	r = requests.get(url, headers = headers).text
-	# 	for s in range(len(json.loads(r)["items"])):
-	# 		try:
-	# 			rj = json.loads(r)
-	# 			uri = rj["items"][s]["track"]["uri"].split(":")[2]
-	# 			title = rj["items"][s]["track"]["name"]
-	# 			artist = rj["items"][s]["track"]["album"]["artists"][0]["name"]
-	# 			audio_features = getsong_details(uri,headers)
-	# 			audio_features["title"] = title
-	# 			audio_features["artist"] = artist
-	# 			audio_features["class"] = query
-	# 			audio_features["playlist_id"] = playlist
-	# 			result.append(audio_features)
-	# 		except:
-	# 			continue
-
-	#return json.dumps(result)
 	return result
 
 if __name__ == "__main__":
-	#df = pd.read_csv("data/emotion_queries.csv")
-	#results = []
-	#for q in df["query"]:
-	#	results.append(query_playlists(q))
-	#pickle.dump(results, open("search_results.pkl", 'wb'))
+	df = pd.read_csv("data/emotion_queries.csv")
+	# results = []
+	# for q in df["query"]:
+	# 	results.append(query_playlists(q))
+	# pickle.dump(results, open("search_results.pkl", 'wb'))
 	print(query_playlists("tender"))
 	#pool = multiprocessing.Pool()
 	#print(pool.map(cube,[1,2,3]))
