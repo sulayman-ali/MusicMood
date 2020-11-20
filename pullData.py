@@ -24,6 +24,7 @@ def authenticate(client_id,client_secret):
 	'''
 
 	AUTH_URL = 'https://accounts.spotify.com/api/token'
+	
 	#POST
 	auth_response = requests.post(AUTH_URL,{
 		'grant_type': 'client_credentials',
@@ -68,6 +69,7 @@ def query_playlists(query):
 	url = f"https://api.spotify.com/v1/search?query={urllib.parse.quote_plus(query)}&type=playlist&offset=0&limit=50"
 	r = requests.get(url, headers = headers).text
 	playlistIDs = []
+
 	#get playlist ID from search results for query
 	for n in range(len(json.loads(r)["playlists"]['items'])):
 	    playlistIDs.append((json.loads(r)["playlists"]['items'][n]["id"]))
