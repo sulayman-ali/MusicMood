@@ -1,6 +1,7 @@
 import requests
 import json
 import urllib
+import time
 import numpy as np
 import pandas as pd
 import pickle
@@ -99,9 +100,9 @@ def multiprocess_queries(ids,query):
 	return result 
 
 def multithreading_queries(ids,query):
-	with ThreadPoolExecutor(10) as pool:
+	with ThreadPoolExecutor(20) as pool:
 		with requests.Session() as session:
-			result = pool.map(fetch_songs_from_playlist,session * len(ids), query*len(ids), ids)
+			result = pool.map(fetch_songs_from_playlist,[session] * len(ids), [query]*len(ids), ids)
 	return result 
 
 def query_playlists(query):
@@ -112,6 +113,7 @@ def query_playlists(query):
 	headers = {'Authorization': 'Bearer {token}'.format(token=access_token)}
 	url = f"https://api.spotify.com/v1/search?query={urllib.parse.quote_plus(query)}&type=playlist&offset=0&limit=50"
 	r = requests.get(url, headers = headers).text
+
 	playlistIDs = []
 
 	#get playlist ID from search results for query
@@ -119,16 +121,32 @@ def query_playlists(query):
 	    playlistIDs.append((json.loads(r)["playlists"]['items'][n]["id"]))
 
 	urls = ["https://api.spotify.com/v1/playlists/{p}/tracks".format(p = playlist) for playlist in playlistIDs]
-	#result = multiprocess_queries(playlistIDs,query)
 	result = multiprocess_queries(playlistIDs,query)
+	#result = multithreading_queries(playlistIDs,query)
+
 	return result
+
+def run():
+	pass
+
 
 if __name__ == "__main__":
 	df = pd.read_csv("data/emotion_queries.csv")
-	# results = []
-	# for q in df["query"]:
-	# 	results.append(query_playlists(q))
-	# pickle.dump(results, open("search_results.pkl", 'wb'))
-	print(query_playlists("tender"))
+	results = []
+	c = 0
+	d = 7
+	for q in df["query"][20:]: 
+		c+= 1
+		print(c)
+		try:
+			results.append(query_playlists(q))
+		except:
+			time.sleep(d)
+			print("sleeping")
+			results.append(query_playlists(q))
+
+
+	pickle.dump(results, open("search_results3.pkl", 'wb'))
+	#print(query_playlists("tender"))
 	#pool = multiprocessing.Pool()
 	#print(pool.map(cube,[1,2,3]))
